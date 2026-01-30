@@ -8,7 +8,7 @@ module picorv32_sram #(
   input  wire                   mem_instr,
   output wire                   mem_ready,
   output reg  [DATA_WIDTH-1:0]  mem_rdata,
-  input  wire [31:0]            mem_addr,
+  input  wire [ADDR_WIDTH:0]    mem_addr,
   input  wire [DATA_WIDTH-1:0]  mem_wdata,
   input  wire [3:0]             mem_wstrb
 );
