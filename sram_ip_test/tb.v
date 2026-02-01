@@ -46,7 +46,7 @@ module tb;
   );
   
   //In Top module, the output rdata of sram will go through a register or 32bit flipflop before go to the CPU
-  always@(posedge clk or negedge resetn) begin
+  always@(posedge clk) begin
     if (!resetn) begin
         core_rdata <= 0;
     end else begin
