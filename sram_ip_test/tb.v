@@ -637,7 +637,7 @@ module tb;
     // LITTLE ENDIAN
     $display("\n----------------------------------------------------------");
     $display("**********************************************************");
-    $display("CASE 4: LITTLE ENDIAN TESTS!");
+    $display("CASE 4: LITTLE ENDIAN TESTS! CHECK LOAD BYTE!");
     $display("**********************************************************");
     $display("----------------------------------------------------------\n");
     case_of_test = 4;
@@ -695,6 +695,115 @@ module tb;
         else compare(sram_output_rdata & 32'hff00_0000, 32'h5678_90EF & 32'hff00_0000);    
     end
     
+    $display("\n----------------------------------------------------------");
+    $display("**********************************************************");
+    $display("CASE 5: LITTLE ENDIAN TESTS! CHECK LOAD WORD!");
+    $display("**********************************************************");
+    $display("----------------------------------------------------------\n");
+    case_of_test = 5;
+    
+    $display("\n--------------------------------------------------------------------");
+    $display("STORE 4 CONTIGUOUS BYTES OF A WORD AND LOAD THAT WORD TO CHECK");
+    $display("--------------------------------------------------------------------\n");
+    
+    for (j = 0; j < (1 << 16); j = j + 1) begin
+        sram_addr = j - j % 4; //Round to the near lower word address
+        if (j % 4 == 0) strobe = 4'b0001;  //strobe for masking bit
+        else if (j % 4 == 1) strobe = 4'b0010;
+        else if (j % 4 == 2) strobe = 4'b0100;
+        else strobe = 4'b1000;
+        write_sram(sram_addr, 32'h1A2B_3C4D, strobe);
+    end
+    
+    for (j = 0; j < (1 << 16); j = j + 1) begin
+        if (j % 4 == 0) begin
+            sram_addr = j;
+            read_sram(sram_addr, sram_output_rdata);
+            compare(sram_output_rdata, 32'h1A2B_3C4D);
+        end
+        
+    end
+    
+    $display("\n--------------------------------------------------------------------");
+    $display("STORE 2 CONTIGUOUS HALFWORDS OF A WORD AND LOAD THAT WORD TO CHECK");
+    $display("--------------------------------------------------------------------\n");
+    
+    for (j = 0; j < (1 << 16); j = j + 1) begin
+        if (j % 2 == 0) begin
+            sram_addr = j - j % 4; //Round to the near lower word address
+            if (j % 4 == 0) strobe = 4'b0011;  //strobe for masking bit
+            else strobe = 4'b1100;
+            write_sram(sram_addr, 32'h5960_7E8F, strobe);
+        
+        end
+        
+    end
+    
+    for (j = 0; j < (1 << 16); j = j + 1) begin
+        if (j % 4 == 0) begin
+            sram_addr = j;
+            read_sram(sram_addr, sram_output_rdata);
+            compare(sram_output_rdata, 32'h5960_7E8F);
+        end
+    
+    end
+    
+    $display("\n----------------------------------------------------------");
+    $display("**********************************************************");
+    $display("CASE 6: LITTLE ENDIAN TESTS! CHECK LOAD HALFWORD!");
+    $display("**********************************************************");
+    $display("----------------------------------------------------------\n");
+    case_of_test = 6;
+    
+    $display("\n--------------------------------------------------------------------");
+    $display("STORE 2 CONTIGUOUS BYTES OF A HALFWORD AND LOAD THAT HALFWORD TO CHECK");
+    $display("--------------------------------------------------------------------\n");
+    
+    for (j = 0; j < (1 << 16); j = j + 1) begin
+        sram_addr = j - j % 4; //Round to the near lower word address
+        if (j % 4 == 0) strobe = 4'b0001;  //strobe for masking bit
+        else if (j % 4 == 1) strobe = 4'b0010;
+        else if (j % 4 == 2) strobe = 4'b0100;
+        else strobe = 4'b1000;
+        write_sram(sram_addr, 32'hEF12_AB09, strobe);
+    end
+    
+    for (j = 0; j < (1 << 16); j = j + 1) begin
+            
+        if (j % 2 == 0) begin
+            sram_addr = j - j % 4;
+            read_sram(sram_addr, sram_output_rdata);
+            
+            if (j % 4 == 0) compare(sram_output_rdata & 32'h0000_ffff, 32'hEF12_AB09 & 32'h0000_ffff); //mask byte
+            else compare(sram_output_rdata & 32'hffff_0000, 32'hEF12_AB09 & 32'hffff_0000);
+        end   
+    end
+    
+    $display("\n--------------------------------------------------------------------");
+    $display("STORE A WORD OF 2 CONTIGUOUS HALFWORDS AND LOAD THAT 2 HALFWORDS TO CHECK");
+    $display("--------------------------------------------------------------------\n");
+    
+    for (j = 0; j < (1 << 16); j = j + 1) begin
+        if (j % 4 == 0) begin
+            sram_addr = j;
+            write_sram(sram_addr, 32'hABCD_1234, 4'b1111);
+        end
+        
+    end
+    
+    for (j = 0; j < (1 << 16); j = j + 1) begin
+            
+        if (j % 2 == 0) begin
+            sram_addr = j - j % 4;
+            read_sram(sram_addr, sram_output_rdata);
+            
+            if (j % 4 == 0) compare(sram_output_rdata & 32'h0000_ffff, 32'hABCD_1234 & 32'h0000_ffff); //mask byte
+            else compare(sram_output_rdata & 32'hffff_0000, 32'hABCD_1234 & 32'hffff_0000);
+        end   
+    end
+    
+    
+    
     
     if (err == 0) $display("PASSED ALL TESTS!");
     else $display("FAILED SOME TESTS!");
@@ -708,13 +817,24 @@ module tb;
   task write_sram;
     input [31:0] addr;
     input [31:0] wdata;
-    input [31:0] wstrb; // for store byte, store halfword and store word
+    input [3:0] wstrb; // for store byte, store halfword and store word
     begin
         //assign addr and wdata
         mem_addr = addr;
         mem_wdata = wdata;
         
-        $display("t=%10d [WRITE_SRAM]: addr=%x data=%x wstrb=%4b", $time, mem_addr, mem_wdata, wstrb);
+        $display("\nt=%10d [WRITE_SRAM]: addr=%x data=%x wstrb=%4b", $time, mem_addr, mem_wdata, wstrb);
+        if (wstrb == 4'b1111) $display("CPU STORE WORD %x at %x\n", mem_wdata, mem_addr);
+        else if (wstrb == 4'b0011 || wstrb == 4'b1100) begin
+            if (wstrb == 4'b0011) $display("CPU STORE HALFWORD %04x at %x\n", mem_wdata[15:0], mem_addr);
+            else $display("CPU STORE HALFWORD %04x at %x\n", mem_wdata[31:16], mem_addr + 2);
+        end else begin
+            if (wstrb == 4'b0001) $display("CPU STORE BYTE %02x at %x\n", mem_wdata[7:0], mem_addr);
+            else if (wstrb == 4'b0010) $display("CPU STORE BYTE %02x at %x\n", mem_wdata[15:8], mem_addr + 1);
+            else if (wstrb == 4'b0100) $display("CPU STORE BYTE %02x at %x\n", mem_wdata[23:16], mem_addr + 2);
+            else $display("CPU STORE BYTE %02x at %x\n", mem_wdata[31:24], mem_addr + 3);
+        end
+        
         @(posedge clk); //request sram
         #1;
         mem_valid = 1;
@@ -762,7 +882,7 @@ module tb;
         err = err + 1;
             $display("\n---------------------------------------------------");
             $display("THIS TEST IN CASE %0d", case_of_test);
-        if (case_of_test == 1) begin
+        if (case_of_test == 1 || case_of_test == 5) begin
             
             $display("t=%10d FAIL: CPU CHECK LOAD WORD IS NOT CORRECT", $time);
             $display("Expected: %x Actual: %x",expected_data, output_data);
@@ -786,7 +906,7 @@ module tb;
       
       $display("\n---------------------------------------------------");
       $display("THIS TEST IN CASE %0d", case_of_test);
-        if (case_of_test == 1) begin
+        if (case_of_test == 1 || case_of_test == 5) begin
             
             $display("t=%10d PASS: CPU CHECK LOAD WORD IS CORRECT", $time);
             $display("Expected: %x Actual: %x",expected_data, output_data);
